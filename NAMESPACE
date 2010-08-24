@@ -1,0 +1,9 @@
+export(
+       eco,	
+       sim.eco,
+       gauss.hermite,
+       integrate.gh,
+       tapplysum.fast
+       )
+
+S3method(print, ecoreg)
