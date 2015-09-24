@@ -23,3 +23,9 @@ VERSION 0.2  (2010-08-24)
 * References updated to published versions 
 
 * Maintainer email address updated 
+
+
+VERSION 0.2.1  (2015-08-23) 
+
+* Update to work with current CRAN check and restore the link to the
+  vignette

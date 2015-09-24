@@ -1,0 +1,916 @@
+%\VignetteIndexEntry{Ecological inference with R: the ecoreg package}
+\documentclass{article}
+
+%% Need to modify Sweave.sty to pass pdftex option to graphicx. 
+\usepackage{Sweave}
+\usepackage{times}
+\addtolength{\textwidth}{2cm}
+
+\newcommand{\etal}{{\textit{et al.}}}
+\def\logit{\mathop{\rm logit}\nolimits}
+\def\expit{\mathop{\rm expit}\nolimits}
+\newcommand{\Rfunction}[1]{{\texttt{#1}}}
+\newcommand{\Robject}[1]{{\texttt{#1}}}
+\newcommand{\Rpackage}[1]{{\textit{#1}}}
+\newcommand{\Rmethod}[1]{{\texttt{#1}}}
+\newcommand{\Rfunarg}[1]{{\texttt{#1}}}
+\newcommand{\Rclass}[1]{{\textit{#1}}}
+
+<<echo=FALSE>>=
+options(width = 60)
+version <- gsub("Version: +", "", help(package="ecoreg")$info[[1]][3])
+@ 
+
+\title{Ecological inference with R: the \Rpackage{ecoreg} package \vskip 0.2in
+  \large{Version %
+<<echo=FALSE,results=tex>>= 
+cat(version)
+@ 
+}}
+\author{Christopher Jackson\\MRC Biostatistics Unit, Cambridge\\ \texttt{chris.jackson@mrc-bsu.cam.ac.uk} \footnote{Written while a member of the BIAS project at the Department of Epidemiology and Public Health, Imperial College London} }
+\date{March 2006}
+\bibliographystyle{unsrt}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  In typical small-area studies of health and environment we wish to
+  make inference on the relationship between individual-level
+  quantities using aggregate, or ecological, data.  Such ecological
+  inference is often subject to bias and imprecision, due to the lack
+  of individual-level information in the data.  Simple regressions of
+  area-level mean outcomes on area-level mean exposures are usually
+  biased.  To alleviate bias, the within-area distribution of
+  exposures should be accounted for.  The \Rpackage{ecoreg} package
+  can be used to fit this class of models for ecological inference
+  from aggregate data.  In addition, full outcome and covariate
+  information from a survey of individuals within the areas can be
+  used to improve bias and precision.  \Rpackage{ecoreg} can be used
+  in this way to analyse ecological and individual data simultaneously,
+  using \emph{hierarchical related regression}.
+\end{abstract}
+
+
+\section{Ecological inference} 
+\label{sec:ecological}
+
+Ecological studies analyse data defined at a group level, but aim to
+make inferences about the individuals within the groups. To make
+reliable individual-level inferences from these studies, a number of
+problems must be overcome.  One crucial difficulty is that the
+group-level exposure-response relationship may not reflect the
+individual-level relationship, a problem known as {\em ecological
+  bias}, or the {\em ecological fallacy}.  See, for example,
+\cite{richardson87,GreenlandM,GreenlandR,richardson:monfort} for discussion of these issues.
+
+Denote the outcome count in area $i$, with population $N_i$, by
+$y_{i}$.  To model $y_{i}$ in terms of exposures measured as
+aggregate-level summaries, the usual model is a simple binomial or
+Poisson regression on the area-level covariate means $\overline
+z_{i}$.  With binary covariates, $\overline z_{i}$ is the proportion
+exposed over the area.  However, this only models the relationship
+between the \emph{aggregate} exposures and outcomes.  It is only
+justified as a method of estimating individual-level relationships if
+all individuals in the area have the same covariate value, or there is
+the same exposure-response relationship at the individual and
+aggregate levels, which is generally only true for linear models.
+With non-linear models, such as Binomial or Poisson models, using the
+same model form at both levels will lead to ecological bias
+\cite{richardson87}.
+
+Despite these problems, aggregate data \emph{can} provide information
+about individual-level relationships.  As the ratio of the
+between-area to the within-area variability of the exposure increases,
+the aggregate data summarise the true distribution of the exposure
+more accurately, and contain more information about the true
+individual-level exposure-outcome relationship.  With sufficient
+exposure information, and with \emph{correctly-specified} models for
+the mean outcome
+\cite{richardson87,wakefield:salway,PrenticeS},
+ecological bias can be reduced to negligible levels.
+
+In general, successful ecological inference requires samples of
+individual-level data within areas.  Individual exposure data are
+usually required to reduce ecological bias by accounting for the
+within-area variability of exposures.  But further improvements can
+also be made by using samples of exposures and \emph{outcomes} for
+selected individuals, as discussed by Wakefield~\cite{wakefield2by2}
+for 2 $\times$ 2 tables, and more generally by Jackson \etal
+\cite{improving:eco}.
+
+
+\section{Models for aggregate and individual data}
+\label{sec:models}
+
+The models described here are also described in the papers by
+Jackson \etal \cite{improving:eco} \cite{my:hrr}.
+
+\subsection{Individual data}
+\label{sec:indiv}
+
+We begin by specifying the form of the relationship between the
+individual-level risk of the binary outcome and the covariates.  If
+individual-level exposure and outcome data are available, this is used
+to model them. It will also be used as the basis for an equivalent model
+for the aggregate data, as described in the next section.  The risk $p_{ij}$ of the individual-level
+outcome $y_{ij}$ for the $j$th individual in area $i$ is assumed to be
+a logit-linear function of the covariates.  The most general model we
+consider is \begin{equation}
+  \label{eq:indiv}
+  \logit(p_{ij}) = \mu_i + \sum_r \alpha_r x_{ir} + \sum_r \beta_r z_{ijr} + \gamma_{s_{ij}}
+\end{equation}
+where $x_{ir}$ are group-level covariates, and $z_{ijr}$ are
+individual-level covariates.  The group-level covariates may include
+descriptions of the socio-economic status of the area, or the health
+service provision in the area.  Individual-level covariates might
+comprise individual behaviours such as smoking, demographics such as
+ethnicity, or individual indicators of wealth and social class.
+Individuals may be influenced by the overall average exposure in the
+area, in addition to their own, so that the group-level variables may
+include the means of certain individual-level variables.  $\gamma_s$
+represents an additional contribution to the baseline risk for an
+individual occupying one of several strata $s$, usually defined by age
+and sex.
+
+The baseline risk $\mu_i$ may be fixed at $\mu$ or considered as a
+random effect with some distribution across areas.  This can account
+for any remaining overdispersion and heterogeneity between areas,
+after adjusting for observed area-level variables.  A random effect
+also allows the borrowing of information across areas and can
+stabilise estimation from areas with small populations
+\cite{richardson:best}.
+
+
+
+
+
+\subsection{Aggregate data}
+\label{sec:agg}
+
+\subsubsection{Marginal model}
+Suppose the area-level exposures have been estimated from a survey.
+For example, in the UK census, aggregate data on social class and
+education are calculated using a 10\% sample to maintain
+confidentiality. The proportion of smokers in the area might also be
+estimated from sales figures instead of a census.  Then, individual
+outcomes can be assumed to be independent and identically distributed,
+with risk equal to some marginal ``group-level risk'' $p_{i}$.  We assume
+\begin{equation}
+  \label{eq:bin}
+  y_{i} \sim Bin(N_{i}, p_{i}),
+\end{equation}
+where $p_{i}$ is determined by integrating the individual-level model over
+the joint within-area distribution of covariates
+\cite{richardson87,wakefield:salway}.  Thus, $p_i$ is the average risk
+for an individual in group $i$. 
+\begin{equation}
+  \label{eq:integral}
+  p_i = \int p_{ij}(\mathbf x) f_i(\mathbf x) d \mathbf x = E_{\mathbf x} (p_{ij}(\mathbf x) | i)    
+\end{equation}
+For a \emph{single binary covariate}, observing the proportion exposed
+gives us enough information to estimate a binomial within-area
+distribution.  For \emph{continuous covariates} the mean is not
+sufficient to estimate the within-area distribution, and we generally
+need samples of individual covariate data to be able to estimate the
+within-area variability.  For \emph{multiple binary covariates} the
+joint distribution is estimated by the cross-classification of
+individuals between covariates. Typical census data do not usually
+have this cross-classification, and we need individual data to
+estimate it.
+
+\subsubsection{Conditional model} An alternative to the marginal model
+was proposed by Wakefield \cite{wakefield2by2}.  The binomial
+model~(\ref{eq:bin}) is based on the assumption that each individual
+in group $i$ has an identical marginal probability $p_i$ of outcome,
+integrating over their unknown exposures.  If the binary exposure is
+known for \emph{all} the individuals in the area from a full
+population census, but not necessarily coupled with exposures for the
+same individuals, then these should be conditioned on, leading to a
+likelihood based on a convolution of binomial distributions.  The
+exact likelihood is related to the extended (or non-central)
+hypergeometric distribution, however, Wakefield describes a more
+computationally convenient normal approximation.
+
+
+\subsubsection{Binary covariates} 
+
+For clarity we demonstrate the marginal model for 3 binary covariates,
+however, the framework extends immediately to any number of binary
+covariates.  The integral to obtain the group-level risk is equivalent
+to a sum.  Each individual falls into one of $S \times 2^3$
+categories, defined by the distinct combinations of the 3 covariates
+and the $S$ age-sex strata, and indexed by $k$.  Let $\phi_{ik}$ be
+the probability that an individual occupies category $k$.  Let
+$q_{ik}$ be the probability of the individual outcome conditionally on
+occupying category $k$.  Rewriting the index $k$ as $\{k_1, k_2, k_3,
+s\}$, where $k_r$ (0 or 1) indicates the presence or absence of
+covariate $r = 1, \ldots, 3$.  \begin{equation}
+  \label{eq:bin3}
+  p_{i} = \sum_{k} \phi_{ik} q_{ik}  = \sum_{k_1, k_2, k_3, s} \phi_{\{i, k_1, k_2, k_3, s\}} q_{\{i, k_1, k_2, k_3, s\}}.
+\end{equation}
+The outcome model conditionally on the unobserved category is
+\begin{equation}
+  \label{eq:q}
+  \logit ( q_{\{i, k_1, k_2, k_3, s\}} ) = \mu_i  + \logit(e_s) + \sum_r \alpha_r x_{ir} +  \sum_r k_r \beta_{r}
+\end{equation}
+The effect $\beta_r$ of the binary individual-level covariate $r$ only
+enters into this equation when the covariate $r$ is present.  This is
+a generalisation of the model presented for two covariates by Lasserre
+\etal \cite{lasserre:binary}, except that the outcome is assumed to be
+non-rare and binomial instead of Poisson.  $\logit(e_s)$ is a fixed
+offset, where $e_s$ is the risk of the outcome in stratum $s$,
+estimated from national population data. This is similar in spirit to
+``indirect standardisation'', see, for example, \cite{clayton:hills}.
+If population and outcome totals are available for strata within
+areas, then we could generalise this to a separate binomial model for
+each stratum within area, with coefficients for the other covariates
+shared between the models, assuming no stratum-covariate interactions.
+It is also important to check whether \emph{exposures} are correlated
+with strata. If not accounted for, this can lead to ``mutual
+standardisation bias'' \cite{rosenbaum:rubin:stand}.  
+
+We normally replace $\phi_{ik}$ in (\ref{eq:bin3}) by an estimate
+$\hat \phi_{ik}$.  Ideally this \emph{probability} would be estimated
+by the \emph{proportion} of individuals in area $i$ occupying category
+$k$.  But typical census data are not sufficient to know the complete
+cross-classification of individuals between all of these covariate and
+strata categories.  Usually, our only information is the marginal
+proportions of single covariates, for example, the proportion
+$\phi_i^{(1)}$ of individuals who are economically inactive.  If we
+assume that the covariates are independent, then $\phi_{ik}$ can be
+estimated by the product of the proportions of individuals occupying
+each marginal category defining $k$.  But generally, socioeconomic
+indicators, such as unemployment and social class, are highly
+correlated.  \cite{lasserre:binary} demonstrated that, in a typical
+case, bias is negligible when the joint covariate distribution is
+estimated by the product of the two marginal distributions, even when
+the covariates are correlated.  However, we may wish to study more
+than two covariates.
+
+To estimate $\phi_{ik}$ we can often use a combination of marginal
+proportions $\overline z_{ir}$ and individual covariate data
+$z_{ijr}$.  In the context of the UK census, for example, these
+correspond to district-level aggregate data and the Samples of
+Anonymised Records.  Let $C_{ik}$ be the number of individuals in area
+$i$ in this individual-level dataset occupying category $k$, computed
+from the $z_{ijr}$.  We use the following two principles.  Firstly,
+the estimated $\hat\phi_{ik}$ corresponding to categories $k$ in which
+binary covariate $r$ is 1 must sum to $z_{ir}$.  Secondly, the ratio
+of estimates $\hat\phi_{i_k} / \hat\phi_{i_l}$ must be the same as the
+ratio $C_{ik} / C_{il}$.  This gives, for example, where $R$ is the
+set of categories in which covariate $r$ is 1, \begin{equation}
+  \label{eq:phiik}
+  \hat \phi_{ik} = C_{ik} \overline z_{ir} / \sum_{l \in R} {C_{il}}
+\end{equation}
+
+
+
+\subsubsection{Continuous covariates} 
+Suppose now the individual-level model~(\ref{eq:indiv}) depends only
+on an intercept and one continuous individual-level covariate
+$x_{ij}$: $\logit(p_{ij}) = \mu_i + \beta x_{ij}$.  The ecological
+data consist of the within-area mean $m_i$ of $x_{ij}$.  In some
+cases, as well as the within-area mean, we may also have an estimate
+$s_i^2$ of the within-area variance of $x_{ij}$, for example, from
+geographical modelling of an environmental exposure surface (e.g.
+Best \etal \cite{best:leuk}).  Then we suppose that these exposures
+are normally distributed, with $x_{ij} \sim N(m_i, s_i^2)$.  If an
+exposure is not naturally normally distributed, it can often be
+transformed to normality. We can then calculate the area-specific
+risks~(\ref{eq:integral}) by integrating over $f_i$, here the density
+function of the normal distribution.
+\begin{eqnarray}
+  \label{eq:qint}
+  p_i & = & \int \expit(\mu_i + \beta x) f_i(x) dx
+\end{eqnarray}
+Our assumed underlying model for $p_{ij}(x)$ is logit-linear. In this
+case, the integral is not available in closed form.  However, if we
+approximate the logit by a probit link function, then (\ref{eq:qint})
+evaluates to
+\begin{eqnarray}
+  \label{eq:normal:binomial}
+  p_i & = & \expit  \left \{ (1 + c^2 \beta^2 s_i^2) ^ {-1/2} (\mu_i + \beta m_i) \right \}    
+\end{eqnarray}
+where $c = 16\sqrt{3} / (15 \pi)$ (Salway and Wakefield
+\cite{nonrare}).
+
+If, instead, we were using a Poisson model for a rare outcome, $y_i
+\sim \mbox{Pois}(N_i p_i)$, and a log-linear individual-level model
+$\log(p_{ij}) = \mu_{i} + \beta x_{ij}$, then the integrals can be
+evaluated explicitly without an approximation. Instead
+of~(\ref{eq:normal:binomial}), we would have (Richardson \etal
+\cite{richardson87})
+\begin{eqnarray}
+\label{eq:normal:poisson}
+p_i = \exp \left \{ \mu_i + \beta m_i + \frac{\beta^2 s_i^2}{2} \right \} \qquad
+\end{eqnarray}
+These methods generalise to multiple jointly normally-distributed
+covariates.
+
+\subsubsection{Semi-parametric approach}
+
+We have described a fully parametric model for ecological inference.
+Prentice and Sheppard \cite{PrenticeS} described an alternative
+semi-parametric approach based on estimating functions. This is often
+simply called the \emph{aggregate data} method.  Suppose a sample of
+covariates (binary or continuous) are available from a subset of $n_i$
+individuals, but not the corresponding outcomes on the same
+individuals.  Broadly, the mean and variance of the total disease
+count $y_i$ are calculated in terms of an \emph{aggregate} risk
+$\frac{1}{n_i}\sum_j p_{ij}$.  $p_{ij}$ is the risk for individual $j$
+in area $i$, conditionally on their covariate values.  This method is
+not implemented in the \Rpackage{ecoreg} R package.  This approach
+does not require a within-area distribution to be specified for the
+covariates.  It requires samples of covariate data as an explicit part
+of the model.  On the other hand, the parametric approaches described
+above, and implemented in \Rpackage{ecoreg}, require individual
+covariate data implicitly to estimate an appropriate within-area
+distribution.
+
+
+
+\subsection{Combining aggregate and individual data}
+\label{sec:aggindiv}
+
+To summarise the model for the ecological data, we have a binomial
+model~(\ref{eq:bin}) for the area-level outcome $y_i$.  The
+corresponding area-level risk $p_i$ is calculated explicitly in terms
+of the transformed group baseline risk $\mu_i$, the individual-level
+covariate effects, and the within-area distributions of the covariates.
+
+It is easy to extend this model to include information from a sample
+of individuals in each area whose outcomes and exposures are known.
+We simply model the risk of the individual level outcome with the
+logistic regression~(\ref{eq:indiv}).  Then the covariate effects
+$\alpha$ and $\beta$ and the intercept $\mu_i$ are shared by the
+models for both the aggregate and individual-level data.  Thus, we can
+fit a joint model which combines the information from the two
+sources of data.  This is termed \emph{hierarchical related
+  regression}.
+
+Note that it is not necessary to have individual data within all of
+the areas $i$. In practice, sample survey data will be available from
+varying numbers of individuals between areas.
+
+
+
+
+\section{Using \Rpackage{ecoreg}}
+\label{sec:ecoreg}
+
+The \Rpackage{ecoreg} package implements a fairly general case of the
+models described in Section~\ref{sec:models}.  We assume you have
+already downloaded and installed the \Rpackage{ecoreg} package.  To
+apply these methods, you should have one or both of
+
+\begin{itemize}
+\item An aggregate dataset with one record for each aggregate group,
+  for example a geographical area, or a stratum within area, for
+  example from a population census.  This contains aggregate outcomes
+  and exposures, and optionally some indication of the within-area
+  distribution of the exposures.
+
+\item An individual-level dataset, for example from a sample survey
+  study.  There need not be the same number of individuals per area,
+  and there may be some areas in the aggregate dataset with no
+  individuals.  This contains full individual-level covariate and
+  outcome data.
+\end{itemize}
+
+First we load the \Rpackage{ecoreg} package into the working R
+session.
+<<>>=
+library(ecoreg)
+@ 
+The main R function in \Rpackage{ecoreg} is called \Rfunction{eco}.
+This is used to fit a model to one of these datasets, or a combination
+of the two.  The R help page for \emph{eco} fully describes each of
+the function's arguments.  
+
+
+\subsection{Example}
+
+The use of \Rfunction{eco} is illustrated here using a simulated
+dataset.  We simulate aggregate data consisting of 50 groups of 100
+individuals.  Two contextual covariates (labelled deprivation and mean
+income) are generated as standard normal variables.  Two covariates
+which are binary at the individual level, and available at the
+aggregate level as the proportion of non-white individuals and smokers
+in each area, are generated from uniform distributions.  The data
+frame \Robject{sim.df} contains the ecological covariate data.
+
+<<>>=
+ng <- 50
+N <- rep(100, ng)
+set.seed(31412) 
+ctx <- cbind(deprivation = rnorm(ng), mean.income = rnorm(ng))
+phi <- cbind(nonwhite = runif(ng), smoke = runif(ng))
+sim.df <- as.data.frame(cbind(ctx, phi))
+sim.df[1:5,]
+@  
+A disease outcome with approximate 5\% baseline prevalence, and odds
+ratios of 1.01, 1.02, 1.5 and 2 respectively for the four covariates,
+is now simulated.  The function \Rfunction{sim.eco} is provided to
+simulate ecological outcome data and individual sample data, in terms
+of known covariates, baseline risks and odds ratios.  
+<<>>=
+mu <- qlogis(0.05)
+alpha.c <- log(c(1.01, 1.02))
+alpha <- log(c(1.5, 2))
+sim1 <- sim.eco(N, ctx=~deprivation+mean.income, binary=~nonwhite+smoke, data = sim.df,  mu=mu, alpha.c=alpha.c, alpha=alpha, isam=10)
+sim1$y[1:5]
+aggdata <- as.data.frame(cbind(y=sim1$y, N=N, sim.df))
+@ 
+\paragraph{Format of aggregate dataset} 
+We have now got an aggregate dataset \Robject{aggdata} suitable for
+use with the \Rfunction{eco} function.  Generally, the aggregate
+dataset should be a data frame with a row corresponding to an area or
+group.  It should have at mininum an outcome variable. This is
+available either as a proportion of individuals with the outcome, or
+the number of events and the population at risk in the area. In
+addition, any number of aggregate covariates can be specified.  Often
+these will be binary covariates, expressed as proportions over the
+area.  For covariates that are continuous at the individual level,
+these should be specified as within-area means, and if possible,
+within-area variances, after transformation to an approximate normal
+distribution.  For example, we print the first ten rows of the
+\Robject{aggdata} data.
+<<>>=
+aggdata[1:5,]
+@ 
+The number of individuals with the disease, the population of the
+area, the deprivation index, the mean income, the proportion of
+non-white individuals, the proportion of smokers, and the mean and
+standard deviation of the pollution exposure are labelled \Robject{y},
+\Robject{N}, \Robject{deprivation},
+\Robject{mean.income}, \Robject{nonwhite} and \Robject{smoke}, respectively.
+
+The return value of \Rfunction{sim.eco} has a component \Robject{y}
+containing the ecological outcome data (the number of individuals in
+each area with the outcome), and a component \Robject{idata}
+containing the individual sample data.  Here we have specified
+\Rfunarg{isam=10} in the call to \Rfunction{sim.eco}, producing an
+individual sample dataset with 10 individuals for each of the 50 areas.
+<<>>=
+indivdata <- sim1$idata
+@ 
+
+\paragraph{Format of individual dataset} 
+We have now got an individual dataset \Robject{indivdata} suitable for
+use with the \Rpackage{ecoreg} package.  The individual dataset should
+be a data frame with each row corresponding to an individual.
+Variables may include a binary outcome and any number of covariates.
+For example, the first 15 rows of \Robject{indivdata} are illustrated.
+<<>>=
+indivdata[1:15,]
+@  
+
+The area indicator, the disease status of the individual, the
+deprivation index and the mean income of the area in which the
+individual lives, indicators for non-white ethnicity and whether the
+individual smoked, the pollution exposure and the area indicator are
+labelled \Robject{group}, \Robject{y}, \Robject{deprivation},
+\Robject{mean.income}, \Robject{nonwhite} and \Robject{smoke}
+respectively.  Binary indicators are 0 or 1 corresponding to no and
+yes respectively.  The area indicator is only necessary when using
+models with random area effects.
+
+
+
+
+\subsection{Calling \Rfunction{eco}}
+
+Now we give examples of calling the \emph{eco} function to fit models
+to the aggregate and individual datasets.  
+
+\subsubsection{Aggregate data alone} 
+
+Firstly, we fit the correct model to the simulated data, with two
+contextual covariates and two individual binary covariates, using the
+aggregate data alone.
+<<>>=
+agg.eco <- eco(cbind(y, N) ~ deprivation + mean.income,
+               binary = ~ nonwhite + smoke,  data = aggdata)
+@ 
+\begin{itemize}
+\item The first argument of \Rfunction{eco} is a formula, as used in
+most statistical modelling functions in R such as \Rfunction{lm} and
+\Rfunction{glm}. It specifies the \emph{aggregate} component of the
+model, that is, the names of any covariates included in $x_{ir}$
+(equation~\ref{eq:indiv}).  
+
+\item The argument \Rfunarg{data} specifies a data frame which should
+contain all aggregate variables specified in the call to
+\Rfunction{eco}.
+
+\item The \Rfunarg{binary} argument to \Rfunction{eco} is a formula whose
+right hand side should contain the names of any aggregate covariates
+considered as \emph{individual-level} rather than contextual effects,
+here, non-white ethnicity and smoking.  These should be binary at
+the individual level.  \Rfunction{eco} will fit the marginal model
+(\ref{eq:bin}--\ref{eq:integral}) by default for binary covariates.
+To fit the convolution normal-approximation model of
+Wakefield~\cite{wakefield2by2} specify \Rfunarg{model=conditional} in the
+call to \Rfunction{eco}.
+\end{itemize}
+
+The \Rfunction{eco} function returns objects of class
+\Rfunction{ecoreg}.  Printing an object of this class displays the
+estimated odds ratios $\exp(\alpha)$ associated with aggregate-level
+covariates, and odds ratios $\exp(\beta)$ associated with individual
+covariates (equation~\ref{eq:indiv}), along with their 95\%
+confidence intervals, and $-2 \times$ the maximised log-likelihood.
+In this example, the estimates are close to the true values used 
+for simulating the data. 
+<<>>=
+agg.eco
+@ 
+
+\subsubsection{Combining aggregate and individual data} 
+
+Next we combine the aggregate data with the information from samples
+of individuals, as described in Section~\ref{sec:aggindiv}.  Firstly,
+we form a reduced aggregate dataset, removing the individual outcomes
+and population totals which appear in the individual data.  We assume
+that the sampled individuals did not contribute to the estimation of
+the aggregate covariates.
+<<>>=
+aggdata.sub <- aggdata
+aggdata.sub$y <- aggdata$y - tapply(indivdata$y, indivdata$group, sum)
+aggdata.sub$N <- aggdata.sub$N - 10
+@ 
+Again, we fit the correct model to the simulated data, with two
+contextual covariates and two individual binary covariates.  The
+individual-level regression model is given in the \Rfunarg{iformula}
+argument.  The name of the individual-level dataset, in which the
+variables in the individual-level model should appear, is given in the
+\Rfunarg{idata} argument.
+<<>>=
+agg.indiv.eco <- eco(cbind(y, N) ~ deprivation + mean.income,
+               binary = ~ nonwhite + smoke,
+               iformula = y ~ deprivation + mean.income + nonwhite + smoke, 
+               data = aggdata.sub, idata=sim1$idata)
+agg.indiv.eco
+@ 
+In this example, combining with the individual sample data does not
+noticeably improve the precision of the estimates.
+
+\subsubsection{Importance of the between-area exposure contrasts}
+
+Suppose now that we simulate data with a much lower between-area
+exposure variance, such as a uniform(0, 0.2) distribution for
+proportion of non-white ethnicity and uniform(0.1, 0.3) for proportion
+of smokers.  The aggregate data now contain less information about the
+individual-level effects.  The amount of individual-level information
+in ecological data decreases as the between-area to the within-area
+variability of the exposure decreases.  When there are low exposure
+contrasts between areas, inference may be improved by combining the
+ecological data with individual-level data~\cite{improving:eco}.
+
+When fitting the true individual model to the aggregate data alone, we
+obtain highly imprecise estimates for the individual-level effects.  
+<<>>=
+phi <- cbind(nonwhite = runif(ng, 0, 0.2), smoke = runif(ng, 0.1, 0.3))
+sim.df <- as.data.frame(cbind(ctx, phi))
+sim1 <- sim.eco(N, ctx=~deprivation+mean.income, binary=~nonwhite+smoke, data = sim.df,  mu=mu, alpha.c=alpha.c, alpha=alpha, isam=10)
+aggdata <- as.data.frame(cbind(y=sim1$y, N=N, sim.df))
+indivdata <- sim1$idata
+agg.eco <- eco(cbind(y, N) ~ deprivation + mean.income,
+               binary = ~ nonwhite + smoke,  data = aggdata)
+agg.eco
+@ 
+To be able to estimate the individual-level effects more accurately,
+we combine the aggregate data with the individual-level sample data.
+<<>>=
+aggdata.sub <- aggdata
+aggdata.sub$y <- aggdata$y - tapply(indivdata$y, indivdata$group, sum)
+aggdata.sub$N <- aggdata.sub$N - 10
+agg.indiv.eco <- eco(cbind(y, N) ~ deprivation + mean.income,
+               binary = ~ nonwhite + smoke,
+               iformula = y ~ deprivation + mean.income + nonwhite + smoke, 
+               data = aggdata.sub, idata=indivdata)
+agg.indiv.eco
+@ 
+This raises the question of whether the aggregate data do contribute
+any information in this case, and whether we can do just as well by
+analysing the individual data alone.  But we find that precision is
+lower when only the individual data are included. 
+
+<<>>=
+indiv.eco <- eco(iformula = y ~ deprivation + mean.income + nonwhite + smoke, 
+               idata=indivdata)
+indiv.eco
+@ 
+
+
+\subsubsection{Normally-distributed covariates}
+
+We now add a continuous covariate to the simulated data, representing
+estimated exposure to air pollution.  This will have a constant
+within-area standard deviation of 2, and within-area means varying
+around 1.24 with between-area standard deviation 0.1.  A disease
+outcome is simulated with an odds ratio of 1.2 for one unit of
+pollution exposured, and the same odds ratios as before for the other
+covariates.
+
+<<>>=
+phi <- cbind(nonwhite = runif(ng), smoke = runif(ng))
+sim.df <- as.data.frame(cbind(ctx, phi))
+sim.df$poll <- rnorm(ng, 1.24, 0.1)
+sim.df$poll.sd <- rep(0.2, ng)
+sim1 <- sim.eco(N, ctx=~deprivation+mean.income, binary=~nonwhite+smoke,
+                m=sim.df["poll"], S=sim.df["poll.sd"], beta=log(2), 
+                data = sim.df,  mu=mu, alpha.c=alpha.c, alpha=alpha, isam=10)
+aggdata <- as.data.frame(cbind(y=sim1$y, N=N, sim.df))
+aggdata[1:5,]
+@ 
+The area mean of the covariate is called \Robject{poll} in the
+aggregate dataset, and the area standard deviation is called
+\Robject{poll.sd}.  We now model these data as before, including
+pollution as another individual-level covariate in the model.
+
+<<>>=
+agg.eco <- eco(cbind(y, N) ~ deprivation + mean.income, normal= ~ poll, norm.var=poll.sd, 
+               binary = ~ nonwhite + smoke,  data = aggdata)
+agg.eco
+@ 
+
+The \Rfunarg{normal} argument to \Rfunction{eco} is a formula whose
+right-hand side should contain variables denoting the group-level
+means of the normally-distributed covariates.  These covariates will
+then be fitted as individual-level effects, using a model of the form
+of equation~(\ref{eq:normal:binomial}) by default,
+or~(\ref{eq:normal:poisson}) if the outcome is non-rare and
+\Rfunarg{model = ``poisson''} is specified.  The \Rfunarg{norm.var} is
+used to supply the corresponding group-level variances.
+
+The true odds ratio of 2 for pollution is fairly well estimated.  Now
+suppose the pollution data had a lower ratio of between-area to
+within-area standard deviation.
+
+<<>>=
+sim.df$poll <- rnorm(ng, 1.24, 0.1)
+sim.df$poll.sd <- rep(0.2, ng)
+sim1 <- sim.eco(N, ctx=~deprivation+mean.income, binary=~nonwhite+smoke,
+                m=sim.df["poll"], S=sim.df["poll.sd"], beta=log(2), 
+                data = sim.df,  mu=mu, alpha.c=alpha.c, alpha=alpha, isam=10)
+aggdata <- as.data.frame(cbind(y=sim1$y, N=N, sim.df))
+agg.eco <- eco(cbind(y, N) ~ deprivation + mean.income, normal= ~ poll, norm.var=poll.sd, 
+               binary = ~ nonwhite + smoke,  data = aggdata)
+agg.eco
+@ 
+Now the confidence interval for the pollution odds ratio estimate is
+much wider, as there is less information in the aggregate data.
+However, the estimate is not biased.  Again, to improve precision we
+can incorporate the individual-level data.  Remember to include
+pollution in the individual level model \Rfunarg{iformula}. 
+
+<<>>=
+indivdata <- sim1$idata
+indivdata[1:5,]
+aggdata.sub <- aggdata
+aggdata.sub$y <- aggdata$y - tapply(indivdata$y, indivdata$group, sum)
+aggdata.sub$N <- aggdata.sub$N - 10
+agg.indiv.eco <- eco(cbind(y, N) ~ deprivation + mean.income, normal= ~ poll, norm.var=poll.sd, 
+                     binary = ~ nonwhite + smoke,  data = aggdata.sub,
+                     iformula = y ~ deprivation + mean.income + nonwhite + smoke + poll, idata=indivdata
+                     )
+agg.indiv.eco
+@ 
+The precision of the estimate for pollution is improved. 
+
+
+\subsubsection{Within-area distribution of binary covariates} 
+
+To build the model~(\ref{eq:integral}) with more than one binary
+covariate, by default \Rfunction{eco} assumes that the covariates are
+independent within areas. Often this assumption is not appropriate,
+especially when considering, for example, socio-economically related
+factors.
+
+To account for the joint within-area distribution of a set of binary
+or categorical covariates, use the \Rfunarg{cross} argument to
+\Rfunction{eco}.  This should be a matrix containing the same number
+of rows as the aggregate data, and number of columns equal to the
+distinct number of covariate categories into which an individual can
+belong.  For full details of how to specify \Rfunarg{cross}, refer to
+the help page for the \Rfunction{eco} function.  The \Rfunarg{cross}
+needs to be calculated by the user before calling \Rfunction{eco}.
+Individual data may be required to estimate \Rfunarg{cross}, as
+typical census data do not give detailed cross-classification tables.
+
+This is now illustrated with a hypothetical example.  We introduce
+another covariate called \Robject{soclass} into the \Robject{aggdata}
+data representing the proportion of individuals in a lower social
+class.  This is likely to be correlated with smoking at both aggregate
+and individual level.  Suppose that we have an information from an
+individual-level survey, suggesting that an individual is twice as
+likely to smoke if in a lower social class. We wish to use this
+information to construct a matrix with 100 rows and four columns,
+representing estimates of the proportion of individuals who are in
+each of four categories:
+
+\begin{enumerate}
+\item neither smoke nor are in the lower social class ($p_{00}$)
+\item smoke but are not in the lower social class  ($p_{10}$)
+\item do not smoke but are in the lower social class ($p_{01}$)
+\item smoke and are in the lower social class.  ($p_{11}$)
+\end{enumerate}
+Let $p_A$ be the proportion of smokers, and $p_B$ be the proportion of
+individuals in the lower social class, in an area.  We know that
+$p_{10} + p_{11} = p_A$, $p_{01} + p_{11} = p_B$ and, from the survey,
+$(p_{11}/p_B) / (p_{10}/(1 - p_B)) = 2$.  This leads, for example, to
+\[
+p_{11} = 2 p_A p_B / (1 + p_B)
+\]
+This is enough information to construct all the estimated cross-classification probabilities, 
+as illustrated by the following R code. 
+<<>>=
+aggdata$soclass <- plogis(qlogis(aggdata$smoke) + runif(ng, -1, 1))
+pa <- aggdata$smoke
+pb <- aggdata$soclass
+p11 <- pa*pb* 2 /(1 + pb)
+p10 <- pa - p11
+p01 <- pb - p11
+p00 <- 1 - (p01 + p10 + p11)
+cross <- cbind(p00, p10, p01, p11)
+cross[1:5,]
+@
+This is the cross-classification matrix that we can supply to
+\Rfunction{eco} if we wanted to construct an ecological model
+including both smoking and social class, for example
+<<results=hide>>=
+eco(cbind(y, N) ~ 1, binary = ~ smoke + soclass, cross=cross, data=aggdata)
+@
+To account for the joint within-area distribution of a set of
+continuous covariates, use the \Rfunarg{norm.var} argument to
+\Rfunction{eco} to specify the joint covariance matrix of the
+covariates, assumed normally distributed, for each area.  For further
+details of how to specify \Rfunarg{norm.var} in this way, refer to the
+help page for the \Rfunction{eco} function.
+
+\Rpackage{ecoreg} does not support specifying the within-area
+covariance between binary and continuous covariates.  These are
+assumed to be independent in the model.
+
+
+\subsubsection{Stratification} 
+
+Suppose that outcome data and covariate data are available by age and 
+To account for differing disease risks in strata defined by age and
+sex, using fixed offsets determined from the whole population (as in
+equations \ref{eq:indiv} and \ref{eq:q}), use the \Rfunarg{strata},
+\Rfunarg{pstrata} and \Rfunarg{istrata} arguments to \Rfunction{eco}.
+
+\begin{itemize}
+\item \Rfunarg{pstrata} should be a vector with one element for each
+  stratum, giving the assumed baseline outcome probabilities for the
+  strata.
+
+\item \Rfunarg{strata} should be a matrix with the same number of rows
+  as the aggregate data.  Rows represent areas, and columns represent
+  the strata occupancy \emph{proportions} for those areas (which are
+  used as estimates of the observed occupancy \emph{probabilities}).
+  Alternatively, to account for within-area correlation between strata
+  membership and binary covariate status, the cross-classification
+  between strata and covariates can be specified in the
+  \Rfunarg{cross} argument.  See the help page to \Rfunction{eco}.
+  
+\item If individual data are modelled, \Rfunarg{istrata} should be a
+  variable containing the individual-level variable indicating the
+  stratum an individual occupies. This should be a factor, whose
+  levels correspond to the columns of the matrix \Rfunarg{strata}.
+\end{itemize}
+
+
+\subsubsection{Categorical covariates} 
+
+As well as binary covariates, categorical covariates can also be
+fitted as individual-level predictors.  The aggregate data for
+categorical covariates must be supplied separately from the main
+aggregate dataset, in the \Rfunarg{categorical} argument to
+\Rfunction{eco}.  See the help page for \Rfunction{eco}.  In practice,
+there is not likely to be enough information in ecological data for
+successful ecological inference on categorical variables with large
+numbers of categories.
+
+
+
+
+
+\subsubsection{Random effects models}
+
+By default, \Rfunction{eco} assumes the baseline risk $\mu_i$
+(equation~\ref{eq:indiv}) is constant $\mu$ between areas $i$.
+Optionally, \Rfunction{eco} can also fit $\mu_i$ as a
+normally-distributed random effect.  If \Rfunarg{random=TRUE} is
+specified in the call to \Rfunction{eco}, an area-level random
+intercept is included in the model.  In this case the data should
+indicate which area each row of the data corresponds to.  In the
+individual data, \Rfunarg{igroups} should give the name of a variable
+containing the group identifiers of the individual-level data.  In the
+aggregate data, by default, the groups are the row numbers of the
+dataset.  Alternatively, \Rfunarg{groups} specifies a group-level
+variable containing the group identifiers to be matched with the
+groups given in \Rfunarg{igroups}.
+
+\Rfunction{eco} uses adaptive Gauss-Hermite integration
+\cite{liu:pierce} to fit random effects models.  The Gauss-Hermite
+integration can be controlled by the arguments \Rfunarg{gh.points} and
+\Rfunarg{iter.adapt} to \Rfunction{eco}.  \Rfunarg{gh.points} gives
+the number of points to use for quadrature, while \Rfunarg{iter.adapt}
+gives the number of iterations to use for the adaptive phase of the
+algorithm.
+
+Random effects model fitting is relatively slow, and it may be useful
+to view the progress of the model fitting by specifying a
+\Rfunction{control} argument, such as \Rfunction{control=list(trace=1,
+  REPORT=1)}. This is passed from \Rfunction{eco} to
+\Rfunction{optim}, the R function which performs optimisation of the
+likelihood. See \Rfunction{help(optim)} for further options to control
+optimisation.
+
+
+\section{Warnings and limitations} 
+
+\begin{itemize}
+  
+\item It is easy to over-fit models, especially with several
+  covariates.  Often there is not enough information available in
+  aggregate data.
+  
+\item When fitting many covariates, it is essential to account for
+  their within-area distribution.
+  
+\item Continuous covariates must be normally-distributed or able to be
+  transformed to normality. 
+  
+\item Only limited error-checking is performed at the moment.
+  \Rfunction{eco} may fail with an incomprehensible error message if
+  the model or data are specified wrongly or inconsistently.
+
+\end{itemize}
+
+
+
+\section{\Rpackage{eco} reference guide}
+
+The R help page for \Rfunction{eco} gives details of all the allowed
+arguments and options to the \Rfunction{eco} function.  To view this
+online in R, type:
+
+<<eval=FALSE>>=
+help(eco)
+@ 
+Similarly, all other functions in the package have help pages,
+which should always be consulted in case of doubt about how to call
+them.  The web-browser based help interface may be convenient - type
+
+<<eval=FALSE>>=
+help.start()
+@ 
+and navigate to \textsf{Packages} $\ldots$ \textsf{ecoreg}, which brings
+up a list of all the functions in the package with links to their
+documentation, and a link to this manual in PDF format.
+
+
+
+\section{Similar software}
+
+\begin{itemize}
+  
+\item WinBUGS (\texttt{http://www.mrc-bsu.cam.ac.uk/bugs}) can be used
+  to fit these models from a Bayesian perspective using Markov Chain
+  Monte Carlo simulation.  While computationally slower, this approach
+  is amenable to extension to account for complexities such as random
+  intercepts, random coefficients, spatial correlation and measurement
+  error.  WinBUGS files containing worked examples of a range of these
+  models, using methods described by Jackson
+  \etal~\cite{improving:eco}~\cite{my:hrr} are provided at
+  \texttt{http://www.bias-project.org.uk/software}.
+
+\item The R package \Rpackage{eiPack} implements ecological inference
+  for R $\times$ C contingency tables.
+  
+\item The R package \Rpackage{MCMCpack}, available from CRAN,
+  implements ecological inference for $2 \times 2$ tables using a
+  Bayesian hierarchical model described by Wakefield
+  \cite{wakefield2by2}.
+  
+\item The R package \Rpackage{eco}, available from CRAN, implements
+  ecological inference for $2 \times 2$ tables, using methods
+  described by Imai and Lu~\cite{imai:lu}.
+  
+\item \emph{EI} and \emph{EzI} \cite{king:ei} by Kenneth Benoit and
+  Gary King, implementing methods from King~\cite{king:solution}.
+
+\end{itemize}
+
+
+
+
+\bibliography{abbrev,ecoreg}
+
+\end{document}

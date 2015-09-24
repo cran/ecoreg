@@ -1,0 +1,17 @@
+1e618e806ba66fb96fbbe60936dc2ab2 *DESCRIPTION
+bf6ec9f86b613c5768307a74cf1d1bb5 *NAMESPACE
+baa08aac10926d09a57569160ad19424 *R/eco.R
+90b4b2934f58af66cde8ab1cefef3794 *R/gh.R
+d8879d58c99ae613af4712942b4272ab *R/simul.R
+2139ae2fc7d7e30823c9dde1391d85ee *build/vignette.rds
+889e21fb1013f762c4dc045437be3078 *inst/CITATION
+c2f994b34606223bf6e35df6d20f0b11 *inst/NEWS
+2715d2ce1a1c3e9cec57f2072a3f3285 *inst/doc/ecoreg-guide.pdf
+6f9d5490c04d4ecef8aa745832fdf215 *man/eco.Rd
+d69df745d52aa614f94583b0a627ff99 *man/gauss.hermite.Rd
+7ad6d513c60931b51868408b310acec7 *man/integrate.gh.Rd
+d5503f16d047ad7c3ff4b57cbf7ca7a6 *man/sim.eco.Rd
+d804dbcbb9145d16bfbfab431caeef32 *man/tapplysum.fast.Rd
+2d25a4faf522f76352587ecaf13470b5 *vignettes/abbrev.bib
+5f80b776e9268cdb4951a14a95c9025c *vignettes/ecoreg-guide.Rnw
+345bb6a67ac670672d9fff80667c6075 *vignettes/ecoreg.bib

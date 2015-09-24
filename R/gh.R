@@ -51,7 +51,7 @@ integrate.gh <- function(h, n=1, points=10, mu=0, scale=1, ...){
     pts <- gh[,"Points"]
     wts <- gh[,"Weights"]
     s <- 0
-    h2 <- function(x) h(x) / dnorm(x, mu, scale)
+    h2 <- function(x, ...) h(x, ...) / dnorm(x, mu, scale)
     for (i in 1:points) {
         s <- s + (wts[i])*h2(mu + scale*pts[i], ...) 
     }

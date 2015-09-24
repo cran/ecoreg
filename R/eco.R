@@ -46,7 +46,6 @@ function(formula,
           cats <- c(cats,  nlevs)
           aoff <- c(aoff, mod$nbin + cumsum(nlevs-1) - (nlevs[1]-1))
       }
-#      browser()
       if (length(cats) > 0) {
           combs <- as.matrix(expand.grid(lapply(cats, function(x)(seq(length=x)-1))))  # matrix with one row for each cross-class category
           whicha <- t(apply(combs, 1, function(x) ifelse(x>0, aoff+x, NA)))               # indices of parameter vector to use 
@@ -317,6 +316,7 @@ lik.agg <- function(U, adata, mod, allgroups, alpha.c, alpha, beta, sig, d=0)
     q <- as.numeric(adata[,mod$ctx.labs,drop=FALSE] %*% alpha.c)
     q <- q + U[match(adata[,"group"], allgroups)]*sig # input U: one per group in allgroups.  replicate to length of adata
     q <- q + adata[,"off"]
+#    cat(alpha.c, "\n")
     if (mod$nnorm > 0) {
         if (mod$outcome=="binomial") {
             c <- 16*sqrt(3) / (15 * pi)            
@@ -333,10 +333,12 @@ lik.agg <- function(U, adata, mod, allgroups, alpha.c, alpha, beta, sig, d=0)
       q <- array(outer(q, qlogis(mod$pstrata), "+"), dim=c(nrow(as.matrix(q)), ncol(as.matrix(q))*mod$nstrata))
     p <- rowSums(adata[,mod$phi.labs,drop=FALSE] * plogis(q))
     if (d==0 && mod$model=="marginal")  {
-        agglik <-
           if (mod$outcome=="binomial")
-            dbinom(y, N, p, log=TRUE) 
-          else dpois(y, N*p, log=TRUE)
+              agglik <- dbinom(y, N, p, log=TRUE) 
+          else {
+##              pp <- rowSums(adata[,mod$phi.labs,drop=FALSE] * exp(q))
+              agglik <- dpois(y, N*p, log=TRUE)
+          }
     }
     else if (d==0 && mod$model=="conditional") {
         ymu <- N * p
@@ -377,7 +379,7 @@ lik.agg <- function(U, adata, mod, allgroups, alpha.c, alpha, beta, sig, d=0)
     }
     else stop("d must be 0, 1 or 2")
 
-    agglik <- tapplysum.fast(agglik, adata[,"group"]) # one for each agroup.  returns 1 number if used within estimate.re 
+    agglik <- tapplysum.fast(agglik, adata[,"group"]) # one for each agroup.  returns 1 number if used within estimate.re 
     agglik <- agglik[match(allgroups, unique(adata[,"group"]))] # one for each allgroups, NA if group doesn't appear. 
     agglik[is.na(agglik)] <- 0
     agglik
@@ -402,7 +404,7 @@ lik.indiv <- function(U, idata, mod, allgroups, alpha.c, alpha, beta, sig, d=0)
           { - sig^2 * (y * plogis2(q) + (1 - y) * (plogis3(q)*(1 - plogis(q)) + plogis2(q)^2) / (1 - plogis(q))^2) }
         ilik <- d2binom(iy, iq)
     }    
-    ilik <- tapplysum.fast(ilik, idata[,"group"]) # one for each igroup 
+    ilik <- tapplysum.fast(ilik, idata[,"group"]) # one for each igroup 
     ilik <- ilik[match(allgroups, unique(idata[,"group"]))] # one for each allgroups, NA if group doesn't appear  
     ilik[is.na(ilik)] <- 0
     ilik

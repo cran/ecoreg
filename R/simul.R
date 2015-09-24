@@ -8,7 +8,7 @@
 ### ngr groups
 ### Take a sample survey of isam, same size from each group (for now) 
 
-### CONSISTENCY CHECKS
+### CONSISTENCY CHECKS
 ### WITH CATEGORICAL COVARIATES
 
 #sim.eco <- function(N, ctx, # as is
