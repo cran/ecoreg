@@ -110,7 +110,7 @@ sim.eco <- function(N, ctx, binary, m, data=NULL, S=0,
             x2 <- if (nccov > 0) matrix(rnorm(N*nccov, as.numeric(m), as.numeric(S)), ncol=nccov, byrow=TRUE) else 0
             stratum <- if (nstrata > 1) sample(seq(length=nstrata), size=N, prob=strata, replace=TRUE) else 0
             off <- if (nstrata > 1) qlogis(pstrata[stratum]) else 0
-            linpred <- mu  +  as.numeric(ctx) %*% as.numeric(alpha.c)  +  as.numeric(x %*% alpha)  + as.numeric(x2 %*% beta)  + off
+            linpred <- mu  +  as.vector(as.numeric(ctx) %*% as.numeric(alpha.c))  +  as.numeric(x %*% alpha)  + as.numeric(x2 %*% beta)  + off
             y <- rbinom(N, 1, plogis(linpred))
             ny <- sum(y)
             if (sam > 0) {

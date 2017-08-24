@@ -146,7 +146,7 @@ function(formula,
               norm.var <- lapply(split(norm.var, seq(length=nrow(norm.var))),
                                  function(x){
                                      z <- matrix(0, nrow=length(x), ncol=length(x))
-                                     diag(z) <- x ^ 2
+                                     diag(z) <- as.numeric(x) ^ 2
                                      z}
                                  )
           }
@@ -447,6 +447,7 @@ estimate.re <- function(adata, idata, mod, alpha.c, alpha, beta, sig)
         }
         else idi <- NULL
         allgroups <- 1
+browser()
         optfn <- function(U) -( sum ( lik.eco.fixed(U, aggi, indivi, adi, idi, mod, allgroups,
                                                     alpha.c, alpha, beta, sig, d=0, give.log=TRUE) ) # - log likelihood
                                + dnorm(U, log=TRUE) )
