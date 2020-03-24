@@ -44,15 +44,23 @@ function(formula,
       if (mod$ncat > 0) {
           phi.bin <- if (!is.null(phi.bin)) cbind(phi.bin, do.call("cbind", categorical)) else do.call("cbind", categorical)
           cats <- c(cats,  nlevs)
-          aoff <- c(aoff, mod$nbin + cumsum(nlevs-1) - (nlevs[1]-1))
+          aoff <- c(rep(1, mod$nbin), nlevs - 1)
+          aoff <- lag(cumsum(aoff))
+          aoff <- replace(aoff, is.na(aoff), 0)
       }
       if (length(cats) > 0) {
-          combs <- as.matrix(expand.grid(lapply(cats, function(x)(seq(length=x)-1))))  # matrix with one row for each cross-class category
-          whicha <- t(apply(combs, 1, function(x) ifelse(x>0, aoff+x, NA)))               # indices of parameter vector to use 
-           # which set of linear covariate effects applies to each covariate combination
-          mod$whicha <- apply(matrix(whicha, nrow=nrow(combs), ncol=ncol(combs)), 1, function(x) (as.numeric(x[!is.na(x)])))
-#          apply(matrix(whicha, nrow=ncol(combs), ncol=nrow(combs)), 2, function(x) (as.numeric(x[!is.na(x)])))
-#          mod$whicha <- apply(as.matrix(whicha), 2, function(x)(as.numeric(x[!is.na(x)])))
+          combs <- as.matrix(expand.grid(lapply(cats,
+                                                function(x)(seq(length=x)))))  # matrix with one row for each cross-class category
+### We need a reference category, so subtract one
+          combs <- combs - 1
+### Zero-th elements don't get picked, set to NA
+          combs <- replace(combs, combs == 0, NA)
+          whicha <- t(apply(combs, 1, function(x) aoff + x))
+          whicha <- split(whicha, seq(nrow(whicha)))
+          mod$whicha <- lapply(whicha, function(x)as.vector(na.omit(x)))
+
+          ## Overwrite for the code that follows
+          combs <- as.matrix(expand.grid(lapply(cats, function(x) (seq(length = x) - 1))))
           mod$ncombs <- nrow(combs)
           if (!user.cross) {
               phi.cross <- matrix(0, mod$ngra, mod$ncombs)
@@ -263,7 +271,7 @@ function(formula,
       }
       else res.random <- NULL
 
-      aux <- list(pars=pars, res=res, covmat=covmat, mod=mod, adata=adata, idata=idata, gh.points=gh.points, ...)
+      aux <- list(pars=pars, res=res, covmat=covmat, mod=mod, adata=adata, idata=idata, gh.points=gh.points, aoff = aoff, ...)
       
       ret <- list(call=match.call(), lik=res$value, ors.ctx=ors.ctx, ors.indiv=ors.indiv, random=res.random, mod=mod, corrmat=corrmat, aux=aux)
 #      if (keep.data) ret$adata <- adata
@@ -327,10 +335,13 @@ lik.agg <- function(U, adata, mod, allgroups, alpha.c, alpha, beta, sig, d=0)
           q <- q + as.numeric(adata[,mod$norm.labs,drop=FALSE] %*% beta +
                               0.5 * sapply(attr(adata, "norm.var"), function(x) beta %*% x %*% beta) )
     }
-    if (mod$nbin + mod$ncat > 0) 
-      q <- outer(q, sapply(mod$whicha, function(x) sum(alpha[x])), "+")
-    if (mod$nstrata > 1)
-      q <- array(outer(q, qlogis(mod$pstrata), "+"), dim=c(nrow(as.matrix(q)), ncol(as.matrix(q))*mod$nstrata))
+    if (mod$nbin + mod$ncat > 0) {
+        q <- outer(q, sapply(mod$whicha, function(x) sum(alpha[x])), "+")
+    }
+    if (mod$nstrata > 1) {
+        q <- array(outer(q, qlogis(mod$pstrata), "+"), dim=c(nrow(as.matrix(q)), ncol(as.matrix(q))*mod$nstrata))
+    }
+    
     p <- rowSums(adata[,mod$phi.labs,drop=FALSE] * plogis(q))
     if (d==0 && mod$model=="marginal")  {
           if (mod$outcome=="binomial")

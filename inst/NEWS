@@ -35,3 +35,10 @@ VERSION 0.2.2  (2017-08-24)
 
 * Minor updates to work with R-devel update where squaring a data frame
   no longer results in a matrix.
+
+
+VERSION 0.2.3 (2020-03-24)
+
+* Bug fix in likelihood computation for categorical covariates.  Thanks to Chris Hanretty.
+
+* Source code now hosted at https://github.com/chjackson/ecoreg

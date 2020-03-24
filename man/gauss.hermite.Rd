@@ -7,7 +7,7 @@ gauss.hermite(points, iterlim=50)
 \description{
 \code{gauss.hermite} calculates the Gauss-Hermite quadrature values
 for a specified number of points.  From the \pkg{rmutil} package by Jim
-Lindsey (\url{http://luc.ac.be/~jlindsey/rcode.html})
+Lindsey (\url{https://www.commanster.eu/rcode.html})
 }
 \arguments{
 \item{points}{The number of points.}
