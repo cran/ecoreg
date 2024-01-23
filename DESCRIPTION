@@ -1,7 +1,7 @@
 Package: ecoreg
 Title: Ecological Regression using Aggregate and Individual Data
-Version: 0.2.3
-Date: 2020-03-24
+Version: 0.2.4
+Date: 2024-01-23
 Author: Christopher Jackson <chris.jackson@mrc-bsu.cam.ac.uk>
 Description: Estimating individual-level covariate-outcome associations 
  using aggregate data ("ecological inference") or a combination of 
@@ -9,6 +9,6 @@ Description: Estimating individual-level covariate-outcome associations
 Maintainer: Christopher Jackson <chris.jackson@mrc-bsu.cam.ac.uk>
 License: GPL (>= 2)
 NeedsCompilation: no
-Packaged: 2020-03-24 13:17:02 UTC; chris
+Packaged: 2024-01-23 16:50:59 UTC; Chris
 Repository: CRAN
-Date/Publication: 2020-03-24 14:00:02 UTC
+Date/Publication: 2024-01-23 17:12:47 UTC

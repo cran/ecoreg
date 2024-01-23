@@ -7,3 +7,18 @@ There are no plans to add new features to this package.
 Bugs will still be fixed, and CRAN requirements will be adhered to.
 
 This repository only includes CRAN versions 0.2.2 (2017-08-24) and onwards. 
+
+
+## Installation (development version) 
+
+```r
+install.packages("devtools") # if devtools not already installed
+devtools::install_github('chjackson/ecoreg')
+```
+
+
+## Installation (CRAN version) 
+
+```r
+install.packages("ecoreg")
+```

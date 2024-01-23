@@ -648,7 +648,7 @@ right-hand side should contain variables denoting the group-level
 means of the normally-distributed covariates.  These covariates will
 then be fitted as individual-level effects, using a model of the form
 of equation~(\ref{eq:normal:binomial}) by default,
-or~(\ref{eq:normal:poisson}) if the outcome is non-rare and
+or~(\ref{eq:normal:poisson}) if the outcome is rare and
 \Rfunarg{model = ``poisson''} is specified.  The \Rfunarg{norm.var} is
 used to supply the corresponding group-level variances.
 

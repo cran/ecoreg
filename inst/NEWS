@@ -42,3 +42,10 @@ VERSION 0.2.3 (2020-03-24)
 * Bug fix in likelihood computation for categorical covariates.  Thanks to Chris Hanretty.
 
 * Source code now hosted at https://github.com/chjackson/ecoreg
+
+
+VERSION 0.2.4 (2024-01-23)
+
+* Bug fix in likelihood computation for normally-distributed covariates.  Thanks to Sophie Woodward.
+
+* Vignette regenerated to satisfy CRAN check.

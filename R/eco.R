@@ -44,8 +44,8 @@ function(formula,
       if (mod$ncat > 0) {
           phi.bin <- if (!is.null(phi.bin)) cbind(phi.bin, do.call("cbind", categorical)) else do.call("cbind", categorical)
           cats <- c(cats,  nlevs)
-          aoff <- c(rep(1, mod$nbin), nlevs - 1)
-          aoff <- lag(cumsum(aoff))
+          aoff <- cumsum(c(rep(1, mod$nbin), nlevs - 1))
+          aoff <- c(0, aoff[-length(aoff)])
           aoff <- replace(aoff, is.na(aoff), 0)
       }
       if (length(cats) > 0) {
@@ -55,8 +55,11 @@ function(formula,
           combs <- combs - 1
 ### Zero-th elements don't get picked, set to NA
           combs <- replace(combs, combs == 0, NA)
-          whicha <- t(apply(combs, 1, function(x) aoff + x))
-          whicha <- split(whicha, seq(nrow(whicha)))
+          
+          whicha <-  lapply(split(combs, 1:nrow(combs)), function(x) aoff + x)
+          
+          ## one component per combination of categories 
+          ## result indexes the parameter vector 
           mod$whicha <- lapply(whicha, function(x)as.vector(na.omit(x)))
 
           ## Overwrite for the code that follows
@@ -292,7 +295,7 @@ loglik.eco <- function(pars, mod, adata, idata, gh.points=NULL, ...)
 {    
     alpha.c <- pars[1:(1+mod$nctx)] # area-level covariate effects
     alpha <- if (mod$nbineffs>0) pars[(2+mod$nctx):(1+mod$nctx+mod$nbineffs)] else NULL # individual-level binary covariate effects
-    beta <- if (mod$nnorm > 0) pars[(2+mod$nctx+mod$nbin):(1+mod$nctx+mod$nbin+mod$nnorm)] else NULL # individual-level normal covariate effects
+    beta <- if (mod$nnorm > 0) pars[(2+mod$nctx+mod$nbineffs):(1+mod$nctx+mod$nbineffs+mod$nnorm)] else NULL # individual-level normal covariate effects
     sig <- if (mod$random) exp(pars[mod$nctx+mod$nbineffs+mod$nnorm+2]) else 0
     if (mod$random) 
       loglik <- lik.eco.random(adata, idata, mod, alpha.c, alpha, beta, sig, gh.points, ...)
@@ -325,21 +328,21 @@ lik.agg <- function(U, adata, mod, allgroups, alpha.c, alpha, beta, sig, d=0)
     q <- q + U[match(adata[,"group"], allgroups)]*sig # input U: one per group in allgroups.  replicate to length of adata
     q <- q + adata[,"off"]
 #    cat(alpha.c, "\n")
-    if (mod$nnorm > 0) {
-        if (mod$outcome=="binomial") {
-            c <- 16*sqrt(3) / (15 * pi)            
-            q <- q + as.numeric( (adata[,mod$norm.labs,drop=FALSE] %*% beta) /
-                                sqrt (1 + c*c* sapply(attr(adata, "norm.var"), function(x) beta %*% x %*% beta) ) )
-        }
-        else 
-          q <- q + as.numeric(adata[,mod$norm.labs,drop=FALSE] %*% beta +
-                              0.5 * sapply(attr(adata, "norm.var"), function(x) beta %*% x %*% beta) )
-    }
     if (mod$nbin + mod$ncat > 0) {
         q <- outer(q, sapply(mod$whicha, function(x) sum(alpha[x])), "+")
     }
     if (mod$nstrata > 1) {
         q <- array(outer(q, qlogis(mod$pstrata), "+"), dim=c(nrow(as.matrix(q)), ncol(as.matrix(q))*mod$nstrata))
+    }
+    if (mod$nnorm > 0) {
+        if (mod$outcome=="binomial") {
+            c <- 16*sqrt(3) / (15 * pi)
+            q <- (q + as.numeric( (adata[,mod$norm.labs,drop=FALSE] %*% beta))) /
+                                sqrt(1 + c*c* sapply(attr(adata, "norm.var"), function(x) beta %*% x %*% beta) )
+        }
+        else 
+          q <- q + as.numeric(adata[,mod$norm.labs,drop=FALSE] %*% beta +
+                              0.5 * sapply(attr(adata, "norm.var"), function(x) beta %*% x %*% beta) )
     }
     
     p <- rowSums(adata[,mod$phi.labs,drop=FALSE] * plogis(q))
@@ -458,7 +461,6 @@ estimate.re <- function(adata, idata, mod, alpha.c, alpha, beta, sig)
         }
         else idi <- NULL
         allgroups <- 1
-browser()
         optfn <- function(U) -( sum ( lik.eco.fixed(U, aggi, indivi, adi, idi, mod, allgroups,
                                                     alpha.c, alpha, beta, sig, d=0, give.log=TRUE) ) # - log likelihood
                                + dnorm(U, log=TRUE) )
