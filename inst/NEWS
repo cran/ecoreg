@@ -49,3 +49,9 @@ VERSION 0.2.4 (2024-01-23)
 * Bug fix in likelihood computation for normally-distributed covariates.  Thanks to Sophie Woodward.
 
 * Vignette regenerated to satisfy CRAN check.
+
+
+VERSION 0.2.5 (2024-06-16)
+
+* Vignette source included as requested by CRAN.
+

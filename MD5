@@ -1,4 +1,4 @@
-307b135fc15356441d01b8ff8885b306 *DESCRIPTION
+d1c5c3e965241d51d837b8bd37e2f7c1 *DESCRIPTION
 0fed77749d95ef845545147e81057dee *NAMESPACE
 093d28bf8ca5f5be4b56d9e3f5fdc250 *R/eco.R
 90b4b2934f58af66cde8ab1cefef3794 *R/gh.R
@@ -6,9 +6,10 @@ a320b580aeacc637ddae394ce5e0d196 *R/simul.R
 d15a872e9ec259594f71599833c22ce3 *README.md
 b728fcd2567743f43c28a6a1b6c1cd10 *build/vignette.rds
 b354289b6b1a995ed6ded7e837a826f4 *inst/CITATION
-ac855e80242b7adc3accbc70fb253b67 *inst/NEWS
+f6081136150903bace3b9e4d8a90e95f *inst/NEWS
 e25d15d550d851cd6863430b92362ac0 *inst/doc/ecoreg-guide.R
-39f4854bd7d20db8e1952b702a520626 *inst/doc/ecoreg-guide.pdf
+d359beaac6a1262aeee9aa1bdb19172a *inst/doc/ecoreg-guide.Rnw
+cbbce5f4d5b0fdf237bdde31ed769f13 *inst/doc/ecoreg-guide.pdf
 6f9d5490c04d4ecef8aa745832fdf215 *man/eco.Rd
 dc3a36b959ead12009dfd2ee9467e358 *man/gauss.hermite.Rd
 7ad6d513c60931b51868408b310acec7 *man/integrate.gh.Rd
